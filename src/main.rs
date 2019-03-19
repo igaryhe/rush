@@ -13,28 +13,25 @@ fn spawn_command(cmd: Cmd, stack: &mut Vec<Cmd>) {
     if cmd.command == "history" {
         history(stack);
     } else {
-        match Command::new(cmd.command.clone())
-            .args(cmd.args.clone())
-            .spawn() {
-                Ok(mut child) => {
-                    child.wait().unwrap();
-                },
-                Err(_) => eprintln!("Unknown command: {}", cmd.command.clone())
-            }
-    }
-}
-
-fn spawn_command_nowait(cmd: Cmd, stack: &mut Vec<Cmd>) {
-    if cmd.command == "history" {
-        history(stack);
-    } else {
-        match Command::new(cmd.command.clone())
-            .args(cmd.args.clone())
-            .stdout(Stdio::piped())
-            .spawn() {
-                Ok(_) => {},
-                Err(_) => eprintln!("Unknown command: {}", cmd.command.clone())
-            }
+        let flag = cmd.args.last().clone();
+        if flag != None && flag.unwrap() == "&" {
+            match Command::new(cmd.command.clone())
+                .args(cmd.args.clone())
+                .stdout(Stdio::piped())
+                .spawn() {
+                    Ok(_) => {},
+                    Err(_) => eprintln!("Unknown command: {}", cmd.command.clone())
+                };
+        } else {
+            match Command::new(cmd.command.clone())
+                .args(cmd.args.clone())
+                .spawn() {
+                    Ok(mut child) => {
+                        child.wait().unwrap();
+                    },
+                    Err(_) => eprintln!("Unknown command: {}", cmd.command.clone())
+                };
+        }
     }
 }
 
@@ -56,12 +53,13 @@ fn main() {
         let input = input.trim();
         
         let mut parts = input.split_whitespace();
-        let mut built = Cmd {
+        let built = Cmd {
             command: parts.next().unwrap().to_string(),
             args: parts.map(|s| s.to_string()).collect()
         };
         match built.command.as_str() {
             "exit" => exit(0),
+            
             "!!" => {
                 if stack.len() == 0 {
                     eprintln!("No command in history");
@@ -95,15 +93,8 @@ fn main() {
                         Err(_) => { eprintln!("Wrong command");}
                     };
                 } else {
-                    let flag = built.args.last().clone();
-                    if flag != None && flag.unwrap() == "&" {
-                        built.args.pop();
-                        stack.push(built.clone());
-                        spawn_command_nowait(built, &mut stack)
-                    } else {
-                        stack.push(built.clone());
-                        spawn_command(built, &mut stack)
-                    }
+                    stack.push(built.clone());
+                    spawn_command(built, &mut stack)
                 }
             }
         }
