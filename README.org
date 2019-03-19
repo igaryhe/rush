@@ -1,6 +1,7 @@
 * A Simple Shell Written in Rust
 Implemented functions:
 - Spawn child process
+- Spawn concurrent child process using ~&~
 - Using ~!!~ to execute the previous command
 - Using ~histroy~ to view the operation history
 - Using ~!~ plus a number, to execute previous command with the number
