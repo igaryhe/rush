@@ -1,0 +1,7 @@
+* A Simple Rust Shell
+Implemented functions:
+- Spawn child process
+- Using ~!!~ to execute the previous command
+- Using ~histroy~ to view the operation history
+- Using ~!~ plus a number, to execute previous command with the number
+- Basic error handling
