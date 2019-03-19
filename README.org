@@ -1,4 +1,4 @@
-* A Simple Rust Shell
+* A Simple Shell Written in Rust
 Implemented functions:
 - Spawn child process
 - Using ~!!~ to execute the previous command
