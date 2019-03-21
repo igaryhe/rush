@@ -6,3 +6,7 @@ Implemented functions:
 - Using ~histroy~ to view the operation history
 - Using ~!~ plus a number, to execute previous command with the number
 - Basic error handling
+** Build
+- Install Rust by using command ~curl https://sh.rustup.rs -sSf | sh~
+- ~cd~ to the root directory of this project
+- ~cargo run~
