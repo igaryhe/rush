@@ -74,6 +74,7 @@ fn main() {
                     spawn_command(prev, &mut stack);
                 }
             }
+            
             _ => {
                 let text = built.command.chars();
                 if text.clone().next().unwrap() == '!' {
