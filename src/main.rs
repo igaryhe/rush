@@ -17,26 +17,27 @@ fn spawn_command(cmd: &Cmd) -> bool {
             .stdout(Stdio::piped())
             .spawn() {
                 Ok(_) => {
-                    return true;
+                    true
                 },
                 Err(_) => {
                     eprintln!("Unknown command: {}", cmd.command);
-                    return false;
+                    false
                 }
-            };
+            }
     } else {
         match Command::new(cmd.command.clone())
             .args(cmd.args.clone())
             .spawn() {
                 Ok(mut child) => {
                     child.wait().unwrap();
-                    return true;
+                    true
                 },
                 Err(_) => {
                     eprintln!("Unknown command: {}", cmd.command);
-                    return false;
+                    false
                 }
-            };
+            }
+        
     }
 }
 
