@@ -9,36 +9,100 @@ struct Cmd {
     args: Vec<String>
 }
 
-fn spawn_command(cmd: Cmd, stack: &mut Vec<Cmd>) {
-    if cmd.command == "history" {
-        history(stack);
+fn spawn_command(cmd: &Cmd) -> bool {
+    let flag = cmd.args.last();
+    if flag != None && flag.unwrap() == "&" {
+        match Command::new(cmd.command.clone())
+            .args(cmd.args.clone())
+            .stdout(Stdio::piped())
+            .spawn() {
+                Ok(_) => {
+                    return true;
+                },
+                Err(_) => {
+                    eprintln!("Unknown command: {}", cmd.command);
+                    return false;
+                }
+            };
     } else {
-        let flag = cmd.args.last().clone();
-        if flag != None && flag.unwrap() == "&" {
-            match Command::new(cmd.command.clone())
-                .args(cmd.args.clone())
-                .stdout(Stdio::piped())
-                .spawn() {
-                    Ok(_) => {},
-                    Err(_) => eprintln!("Unknown command: {}", cmd.command.clone())
-                };
-        } else {
-            match Command::new(cmd.command.clone())
-                .args(cmd.args.clone())
-                .spawn() {
-                    Ok(mut child) => {
-                        child.wait().unwrap();
-                    },
-                    Err(_) => eprintln!("Unknown command: {}", cmd.command.clone())
-                };
-        }
+        match Command::new(cmd.command.clone())
+            .args(cmd.args.clone())
+            .spawn() {
+                Ok(mut child) => {
+                    child.wait().unwrap();
+                    return true;
+                },
+                Err(_) => {
+                    eprintln!("Unknown command: {}", cmd.command);
+                    return false;
+                }
+            };
     }
 }
 
-fn history(stack: &mut Vec<Cmd>) {
-    for (i, c) in stack.iter().rev().enumerate() {
-        println!("{} {} {}",stack.len() - i , c.command, c.args.iter()
-                 .fold(String::new(), |acc, arg| acc + arg + " "));
+fn format_args(cmd: &Cmd) -> String {
+    let mut args = cmd.args.iter()
+        .fold(String::new(),
+              |acc, arg| acc + arg + " ");
+    args.pop();
+    args
+}
+
+fn launch(cmd: &Cmd, stack: &mut Vec<Cmd>) {
+    match cmd.command.as_str() {
+        "exit" => exit(0),
+        "!!" => {
+            match stack.len() {
+                0 => {
+                    eprintln!("No history command.");
+                },
+                _ => {
+                    let prev = Cmd {
+                        command: stack.last().unwrap().command.clone(),
+                        args: stack.last().unwrap().args.clone()
+                    };
+                    println!("{} {}", prev.command, format_args(&prev));
+                    launch(&prev, stack);
+                }
+            }
+        },
+        "history" => {
+            stack.push(Cmd {
+                command: "history".into(),
+                args: vec![]
+            });
+            for (i, c) in stack.iter().rev().enumerate() {
+                println!("{} {} {}",
+                         stack.len() - i,
+                         c.command,
+                         format_args(&c));
+            }
+        },
+        _ => {
+            let text = cmd.command.chars();
+            if text.clone().next().unwrap() == '!' {
+                let st = &cmd.command[1..];
+                match st.parse::<usize>() {
+                    Ok(n) => {
+                        if n > stack.len() {
+                            eprintln!("Index out of bound");
+                        } else {
+                            let cmd = stack[n - 1].clone();
+                            println!("{} {}",
+                                     cmd.command,
+                                     format_args(&cmd));
+                            launch(&cmd, stack);
+                        }
+                    },
+                    Err(_) => { eprintln!("Wrong command");}
+                };
+            } else {
+                match spawn_command(&cmd) {
+                    true => {stack.push(cmd.clone())},
+                    false => {}
+                }
+            }
+        }
     }
 }
 
@@ -54,50 +118,9 @@ fn main() {
         
         let mut parts = input.split_whitespace();
         let built = Cmd {
-            command: parts.next().unwrap().to_string(),
-            args: parts.map(|s| s.to_string()).collect()
+            command: parts.next().unwrap().into(),
+            args: parts.map(|s| s.into()).collect()
         };
-        match built.command.as_str() {
-            "exit" => exit(0),
-            
-            "!!" => {
-                if stack.len() == 0 {
-                    eprintln!("No command in history");
-                } else {
-                    let prev = Cmd {
-                        command: stack.last().unwrap().command.clone(),
-                        args: stack.last().unwrap().args.clone()
-                    };
-                    stack.push(prev.clone());
-                    println!("{} {}", prev.command.clone(), prev.args.iter()
-                             .fold(String::new(), |acc, arg| acc + arg + " "));
-                    spawn_command(prev, &mut stack);
-                }
-            }
-            
-            _ => {
-                let text = built.command.chars();
-                if text.clone().next().unwrap() == '!' {
-                    let st = &built.command[1..];
-                    match st.parse::<usize>() {
-                        Ok(n) => {
-                            if n > stack.len() - 1 {
-                                eprintln!("Index out of bound");
-                            } else {
-                                let cmd = stack[n - 1].clone();
-                                stack.push(cmd.clone());
-                                println!("{} {}", cmd.command.clone(), cmd.args.iter()
-                                         .fold(String::new(), |acc, arg| acc + arg + " "));
-                                spawn_command(cmd, &mut stack);
-                            }
-                        },
-                        Err(_) => { eprintln!("Wrong command");}
-                    };
-                } else {
-                    stack.push(built.clone());
-                    spawn_command(built, &mut stack)
-                }
-            }
-        }
+        launch(&built, &mut stack);
     }
 }
