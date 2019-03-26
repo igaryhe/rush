@@ -3,14 +3,18 @@ use std::io::Write;
 use std::io::stdout;
 use std::process::{exit, Command, Stdio};
 
+// A struct use to store each command
 #[derive(Debug, Clone)]
 struct Cmd {
+    /// Command
     command: String,
+    /// All arguments
     args: Vec<String>
 }
-
+// A function use to spawn a process for an executable
 fn spawn_command(cmd: &Cmd) -> bool {
     let flag = cmd.args.last();
+    // If it doesn't need to wait
     if flag != None && flag.unwrap() == "&" {
         match Command::new(cmd.command.clone())
             .args(cmd.args.clone())
@@ -24,7 +28,9 @@ fn spawn_command(cmd: &Cmd) -> bool {
                     false
                 }
             }
-    } else {
+    }
+    // If it needs to wait
+    else {
         match Command::new(cmd.command.clone())
             .args(cmd.args.clone())
             .spawn() {
@@ -41,6 +47,8 @@ fn spawn_command(cmd: &Cmd) -> bool {
     }
 }
 
+// A helper function use to format the output.
+// Basiclly makes it possible to print a full command in one line
 fn format_args(cmd: &Cmd) -> String {
     let mut args = cmd.args.iter()
         .fold(String::new(),
@@ -49,6 +57,12 @@ fn format_args(cmd: &Cmd) -> String {
     args
 }
 
+// This function matches the input, and decide the following operation
+// Up to now, rush support four types of commands:
+// 1. exit, which can terminate the shell program
+// 2. history, which can view all the successfully spawned commands
+// 3. !! or ! + number, can directly spawn a command in history
+// 4. Any available executables in PATH
 fn launch(cmd: &Cmd, stack: &mut Vec<Cmd>) {
     match cmd.command.as_str() {
         "exit" => exit(0),
@@ -113,10 +127,11 @@ fn main() {
         print!("rush> ");
         stdout().flush().unwrap();
         
+        // This part of the code parse the command line input
+        // And cast them into a Cmd struct
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
-        
         let mut parts = input.split_whitespace();
         let built = Cmd {
             command: parts.next().unwrap().into(),
